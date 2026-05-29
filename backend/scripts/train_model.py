@@ -1,11 +1,21 @@
 from pathlib import Path
+import json
 import re
 
 import joblib
+import matplotlib.pyplot as plt
 import pandas as pd
+
 from sklearn.feature_extraction.text import TfidfVectorizer
 from sklearn.linear_model import LogisticRegression
-from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score, confusion_matrix
+from sklearn.metrics import (
+    accuracy_score,
+    classification_report,
+    confusion_matrix,
+    precision_score,
+    recall_score,
+    f1_score
+)
 from sklearn.model_selection import train_test_split
 from sklearn.pipeline import Pipeline
 
@@ -18,11 +28,17 @@ BASE_DIR = Path(__file__).resolve().parents[1]
 
 DATA_DIR = BASE_DIR / "data"
 MODELS_DIR = BASE_DIR / "models"
+ARTIFACTS_DIR = BASE_DIR / "artifacts"
 
 FAKE_DATA_PATH = DATA_DIR / "Fake.csv"
 TRUE_DATA_PATH = DATA_DIR / "True.csv"
 
 MODEL_OUTPUT_PATH = MODELS_DIR / "fake_news_model.pkl"
+METRICS_OUTPUT_PATH = ARTIFACTS_DIR / "model_metrics.json"
+METRICS_CHART_PATH = ARTIFACTS_DIR / "model_metrics_chart.png"
+CONFUSION_MATRIX_CHART_PATH = ARTIFACTS_DIR / "confusion_matrix.png"
+TOP_FAKE_WORDS_PATH = ARTIFACTS_DIR / "top_fake_words.csv"
+TOP_REAL_WORDS_PATH = ARTIFACTS_DIR / "top_real_words.csv"
 
 
 # ------------------------------------------------------------
@@ -118,15 +134,175 @@ def load_and_prepare_dataset() -> pd.DataFrame:
 
 
 # ------------------------------------------------------------
-# 4. Train model
+# 4. Save model metrics to JSON
+# ------------------------------------------------------------
+
+def save_metrics_json(
+    accuracy: float,
+    precision: float,
+    recall: float,
+    f1: float,
+    matrix,
+    labels,
+    report,
+    total_rows: int,
+    training_rows: int,
+    testing_rows: int
+) -> None:
+    """
+    Saves model evaluation results into a JSON file.
+    This will later be useful for the ML Insights page.
+    """
+
+    metrics = {
+        "dataset_rows_after_cleaning": total_rows,
+        "training_rows": training_rows,
+        "testing_rows": testing_rows,
+        "labels": labels,
+        "accuracy": round(float(accuracy), 4),
+        "precision": round(float(precision), 4),
+        "recall": round(float(recall), 4),
+        "f1_score": round(float(f1), 4),
+        "confusion_matrix": matrix.tolist(),
+        "classification_report": report
+    }
+
+    with open(METRICS_OUTPUT_PATH, "w", encoding="utf-8") as file:
+        json.dump(metrics, file, indent=4)
+
+    print(f"Metrics JSON saved to: {METRICS_OUTPUT_PATH}")
+
+
+# ------------------------------------------------------------
+# 5. Save metrics bar chart
+# ------------------------------------------------------------
+
+def save_metrics_chart(accuracy: float, precision: float, recall: float, f1: float) -> None:
+    """
+    Saves a bar chart showing accuracy, precision, recall, and F1-score.
+    """
+
+    metric_names = ["Accuracy", "Precision", "Recall", "F1-score"]
+    metric_values = [accuracy, precision, recall, f1]
+
+    plt.figure(figsize=(8, 5))
+    plt.bar(metric_names, metric_values)
+    plt.ylim(0, 1)
+    plt.title("Model Performance Metrics")
+    plt.ylabel("Score")
+
+    for index, value in enumerate(metric_values):
+        plt.text(index, value + 0.01, f"{value:.4f}", ha="center")
+
+    plt.tight_layout()
+    plt.savefig(METRICS_CHART_PATH)
+    plt.close()
+
+    print(f"Metrics chart saved to: {METRICS_CHART_PATH}")
+
+
+# ------------------------------------------------------------
+# 6. Save confusion matrix chart
+# ------------------------------------------------------------
+
+def save_confusion_matrix_chart(matrix, labels) -> None:
+    """
+    Saves a confusion matrix chart.
+    """
+
+    plt.figure(figsize=(6, 5))
+    plt.imshow(matrix)
+    plt.title("Confusion Matrix")
+    plt.xlabel("Predicted Label")
+    plt.ylabel("Actual Label")
+
+    plt.xticks(range(len(labels)), labels)
+    plt.yticks(range(len(labels)), labels)
+
+    for row_index in range(len(labels)):
+        for column_index in range(len(labels)):
+            plt.text(
+                column_index,
+                row_index,
+                matrix[row_index][column_index],
+                ha="center",
+                va="center"
+            )
+
+    plt.tight_layout()
+    plt.savefig(CONFUSION_MATRIX_CHART_PATH)
+    plt.close()
+
+    print(f"Confusion matrix chart saved to: {CONFUSION_MATRIX_CHART_PATH}")
+
+
+# ------------------------------------------------------------
+# 7. Save feature importance
+# ------------------------------------------------------------
+
+def save_feature_importance(model: Pipeline) -> None:
+    """
+    Saves the top words that influence fake and real predictions.
+
+    Logistic Regression coefficients show which TF-IDF words are more strongly
+    associated with each class.
+    """
+
+    tfidf = model.named_steps["tfidf"]
+    classifier = model.named_steps["classifier"]
+
+    feature_names = tfidf.get_feature_names_out()
+    coefficients = classifier.coef_[0]
+
+    feature_importance_df = pd.DataFrame({
+        "word": feature_names,
+        "coefficient": coefficients
+    })
+
+    # For binary Logistic Regression, one side of the coefficients points
+    # towards one class and the other side points towards the other class.
+    top_negative = feature_importance_df.sort_values(
+        by="coefficient",
+        ascending=True
+    ).head(30)
+
+    top_positive = feature_importance_df.sort_values(
+        by="coefficient",
+        ascending=False
+    ).head(30)
+
+    # Work out which class positive coefficients represent
+    classes = list(classifier.classes_)
+
+    positive_class = classes[1]
+    negative_class = classes[0]
+
+    if positive_class == "fake":
+        top_fake_words = top_positive
+        top_real_words = top_negative
+    else:
+        top_fake_words = top_negative
+        top_real_words = top_positive
+
+    top_fake_words.to_csv(TOP_FAKE_WORDS_PATH, index=False)
+    top_real_words.to_csv(TOP_REAL_WORDS_PATH, index=False)
+
+    print(f"Top fake words saved to: {TOP_FAKE_WORDS_PATH}")
+    print(f"Top real words saved to: {TOP_REAL_WORDS_PATH}")
+
+
+# ------------------------------------------------------------
+# 8. Train model
 # ------------------------------------------------------------
 
 def train_model() -> None:
     """
-    Trains the fake news detection model and saves it.
+    Trains the fake news detection model, evaluates it,
+    saves the model, and generates Stage 3 artifacts.
     """
 
     MODELS_DIR.mkdir(parents=True, exist_ok=True)
+    ARTIFACTS_DIR.mkdir(parents=True, exist_ok=True)
 
     df = load_and_prepare_dataset()
 
@@ -179,6 +355,14 @@ def train_model() -> None:
     labels = ["fake", "real"]
     matrix = confusion_matrix(y_test, y_pred, labels=labels)
 
+    report = classification_report(
+        y_test,
+        y_pred,
+        labels=labels,
+        output_dict=True,
+        zero_division=0
+    )
+
     print("\nModel performance:")
     print(f"Accuracy:  {accuracy:.4f}")
     print(f"Precision: {precision:.4f}")
@@ -189,15 +373,43 @@ def train_model() -> None:
     print("Labels:", labels)
     print(matrix)
 
-    print("\nSaving model...")
+    print("\nSaving model and artifacts...")
 
     joblib.dump(model, MODEL_OUTPUT_PATH)
 
+    save_metrics_json(
+        accuracy=accuracy,
+        precision=precision,
+        recall=recall,
+        f1=f1,
+        matrix=matrix,
+        labels=labels,
+        report=report,
+        total_rows=len(df),
+        training_rows=len(X_train),
+        testing_rows=len(X_test)
+    )
+
+    save_metrics_chart(
+        accuracy=accuracy,
+        precision=precision,
+        recall=recall,
+        f1=f1
+    )
+
+    save_confusion_matrix_chart(
+        matrix=matrix,
+        labels=labels
+    )
+
+    save_feature_importance(model)
+
     print(f"Model saved to: {MODEL_OUTPUT_PATH}")
+    print("\nStage 3 complete.")
 
 
 # ------------------------------------------------------------
-# 5. Run training script
+# 9. Run training script
 # ------------------------------------------------------------
 
 if __name__ == "__main__":
