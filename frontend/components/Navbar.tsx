@@ -45,7 +45,7 @@ export default function Navbar() {
           </Link>
 
           <Link href="/analyse" className="hover:text-slate-950">
-            Analyse
+            Analyse News
           </Link>
 
           <Link href="/dashboard" className="hover:text-slate-950">

@@ -1,29 +1,99 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { analyseNews, PredictionResponse } from "@/lib/api";
+import { supabase } from "@/lib/supabaseClient";
+import type { User } from "@supabase/supabase-js";
+
+type InputType = "headline" | "article" | "url";
+
+type PreparedAnalysisResult = {
+  input_text: string;
+  input_type: InputType;
+  prediction: string;
+  confidence: number;
+  confidence_percentage: string;
+  risk_level: string;
+  explanation: string;
+};
 
 export default function AnalysePage() {
+  const [user, setUser] = useState<User | null>(null);
+  const [isCheckingAuth, setIsCheckingAuth] = useState(true);
+
+  const [inputType, setInputType] = useState<InputType>("article");
   const [text, setText] = useState("");
+
   const [result, setResult] = useState<PredictionResponse | null>(null);
+  const [preparedResult, setPreparedResult] =
+    useState<PreparedAnalysisResult | null>(null);
+
   const [error, setError] = useState("");
   const [isLoading, setIsLoading] = useState(false);
+
+  useEffect(() => {
+    async function checkUser() {
+      const { data } = await supabase.auth.getUser();
+
+      if (!data.user) {
+        window.location.href = "/login";
+        return;
+      }
+
+      setUser(data.user);
+      setIsCheckingAuth(false);
+    }
+
+    checkUser();
+  }, []);
 
   async function handleAnalyse() {
     setError("");
     setResult(null);
+    setPreparedResult(null);
 
-    if (text.trim().length < 20) {
-      setError("Please enter a longer headline or article text.");
+    const trimmedText = text.trim();
+
+    if (!trimmedText) {
+      setError("Please enter a headline, article, or URL.");
+      return;
+    }
+
+    if (inputType === "headline" && trimmedText.length < 10) {
+      setError("Please enter a longer headline.");
+      return;
+    }
+
+    if (inputType === "article" && trimmedText.length < 20) {
+      setError("Please enter a longer article text.");
+      return;
+    }
+
+    if (inputType === "url") {
+      setError(
+        "URL extraction will be added later. For now, please paste the article text instead."
+      );
       return;
     }
 
     try {
       setIsLoading(true);
 
-      const predictionResult = await analyseNews(text);
+      const predictionResult = await analyseNews(trimmedText);
 
       setResult(predictionResult);
+
+      const analysisResult: PreparedAnalysisResult = {
+        input_text: trimmedText,
+        input_type: inputType,
+        prediction: predictionResult.prediction,
+        confidence: predictionResult.confidence,
+        confidence_percentage: predictionResult.confidence_percentage,
+        risk_level: predictionResult.risk_level,
+        explanation: predictionResult.explanation,
+      };
+
+      setPreparedResult(analysisResult);
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -40,6 +110,21 @@ export default function AnalysePage() {
       ? "border-red-200 bg-red-50 text-red-800"
       : "border-green-200 bg-green-50 text-green-800";
 
+  const placeholderText =
+    inputType === "headline"
+      ? "Paste a news headline here..."
+      : inputType === "article"
+      ? "Paste the full article text here..."
+      : "Paste a news article URL here...";
+
+  if (isCheckingAuth) {
+    return (
+      <main className="mx-auto max-w-6xl px-4 py-10">
+        <p className="text-slate-700">Checking login...</p>
+      </main>
+    );
+  }
+
   return (
     <main className="mx-auto max-w-6xl px-4 py-8">
       <div className="mb-6">
@@ -48,18 +133,68 @@ export default function AnalysePage() {
         </p>
 
         <h1 className="text-3xl font-bold text-slate-950 sm:text-4xl">
-          Analyse a headline or article
+          Analyse news content
         </h1>
 
         <p className="mt-3 max-w-3xl leading-7 text-slate-600">
-          Paste a news headline or full article below. The Python FastAPI
-          backend will send the text to the trained machine-learning model and
-          return a prediction.
+          Paste a headline or article below. The Python FastAPI backend will
+          send the text to the trained machine-learning model and return a
+          prediction.
         </p>
+
+        {user?.email && (
+          <p className="mt-3 text-sm text-slate-500">
+            Logged in as <span className="font-semibold">{user.email}</span>
+          </p>
+        )}
       </div>
 
       <div className="grid gap-6 lg:grid-cols-2">
         <section className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
+          <div className="mb-5">
+            <p className="mb-3 font-semibold text-slate-900">
+              What do you want to analyse?
+            </p>
+
+            <div className="grid gap-3 sm:grid-cols-3">
+              <button
+                type="button"
+                onClick={() => setInputType("headline")}
+                className={`rounded-xl border px-4 py-3 font-semibold ${
+                  inputType === "headline"
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-slate-300 bg-white text-slate-700"
+                }`}
+              >
+                Headline
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setInputType("article")}
+                className={`rounded-xl border px-4 py-3 font-semibold ${
+                  inputType === "article"
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-slate-300 bg-white text-slate-700"
+                }`}
+              >
+                Article
+              </button>
+
+              <button
+                type="button"
+                onClick={() => setInputType("url")}
+                className={`rounded-xl border px-4 py-3 font-semibold ${
+                  inputType === "url"
+                    ? "border-slate-950 bg-slate-950 text-white"
+                    : "border-slate-300 bg-white text-slate-700"
+                }`}
+              >
+                URL
+              </button>
+            </div>
+          </div>
+
           <label
             htmlFor="news-text"
             className="mb-2 block font-semibold text-slate-900"
@@ -71,14 +206,24 @@ export default function AnalysePage() {
             id="news-text"
             value={text}
             onChange={(event) => setText(event.target.value)}
-            placeholder="Paste a headline or article text here..."
+            placeholder={placeholderText}
             className="min-h-72 w-full resize-y rounded-2xl border border-slate-300 p-4 leading-7 text-slate-900 outline-none focus:border-slate-950"
           />
 
-          <div className="mt-3 flex items-center justify-between gap-3 text-sm text-slate-500">
+          <div className="mt-3 flex flex-col gap-1 text-sm text-slate-500 sm:flex-row sm:items-center sm:justify-between">
             <span>{text.trim().length} characters</span>
-            <span>Minimum recommended: 20 characters</span>
+            <span>
+              Selected input type:{" "}
+              <span className="font-semibold capitalize">{inputType}</span>
+            </span>
           </div>
+
+          {inputType === "url" && (
+            <p className="mt-4 rounded-xl bg-blue-50 p-3 text-sm leading-6 text-blue-800">
+              URL extraction is planned as a future improvement. For this
+              version, paste the article text manually for the best result.
+            </p>
+          )}
 
           {error && (
             <p className="mt-4 rounded-xl bg-red-50 p-3 text-sm leading-6 text-red-700">
@@ -137,6 +282,15 @@ export default function AnalysePage() {
                 </div>
               </div>
 
+              <div className="rounded-2xl border border-slate-200 p-4">
+                <p className="text-sm font-semibold uppercase tracking-wide text-slate-500">
+                  Input Type
+                </p>
+                <p className="mt-2 text-2xl font-bold capitalize text-slate-950">
+                  {inputType}
+                </p>
+              </div>
+
               <div className="rounded-2xl bg-slate-50 p-5">
                 <p className="mb-2 font-bold text-slate-950">Explanation</p>
                 <p className="leading-7 text-slate-700">
@@ -148,6 +302,18 @@ export default function AnalysePage() {
                 This result is generated by a machine-learning model. It should
                 be used as a risk estimate, not as final proof.
               </div>
+
+              {preparedResult && (
+                <details className="rounded-2xl border border-slate-200 p-4">
+                  <summary className="cursor-pointer font-semibold text-slate-900">
+                    Developer preview: result object for Stage 9
+                  </summary>
+
+                  <pre className="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs text-white">
+                    {JSON.stringify(preparedResult, null, 2)}
+                  </pre>
+                </details>
+              )}
             </div>
           )}
         </section>
