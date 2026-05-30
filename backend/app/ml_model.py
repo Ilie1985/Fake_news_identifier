@@ -2,6 +2,8 @@ from pathlib import Path
 
 import joblib
 
+from app.ai_explanation import generate_ai_explanation
+
 
 BASE_DIR = Path(__file__).resolve().parents[1]
 MODEL_PATH = BASE_DIR / "models" / "fake_news_model.pkl"
@@ -31,6 +33,7 @@ class FakeNewsModel:
     def predict(self, text: str) -> dict:
         """
         Predicts whether the submitted news text is fake or real.
+        Then generates an AI explanation using OpenAI.
         """
 
         if self.model is None:
@@ -44,20 +47,24 @@ class FakeNewsModel:
             probabilities = self.model.predict_proba([text])[0]
             confidence = float(max(probabilities))
 
+        confidence_percentage = f"{confidence * 100:.2f}%"
+
         risk_level = self.get_risk_level(
             prediction=prediction,
             confidence=confidence
         )
 
-        explanation = self.get_basic_explanation(
-            prediction=prediction,
-            confidence=confidence
+        explanation = generate_ai_explanation(
+            text=text,
+            prediction=str(prediction),
+            confidence_percentage=confidence_percentage,
+            risk_level=risk_level
         )
 
         return {
             "prediction": str(prediction),
             "confidence": round(confidence, 4),
-            "confidence_percentage": f"{confidence * 100:.2f}%",
+            "confidence_percentage": confidence_percentage,
             "risk_level": risk_level,
             "explanation": explanation
         }
@@ -83,40 +90,6 @@ class FakeNewsModel:
             return "Uncertain"
 
         return "Uncertain"
-
-    @staticmethod
-    def get_basic_explanation(prediction: str, confidence: float) -> str:
-        """
-        Temporary rule-based explanation.
-
-        In Stage 8, this will be replaced or improved using OpenAI-generated
-        explanations.
-        """
-
-        confidence_percentage = f"{confidence * 100:.2f}%"
-
-        if prediction == "fake":
-            return (
-                f"The model predicts this content as fake with "
-                f"{confidence_percentage} confidence. This means the wording "
-                "and patterns are similar to fake news examples seen during "
-                "training. This result should be treated as a risk estimate, "
-                "not final proof."
-            )
-
-        if prediction == "real":
-            return (
-                f"The model predicts this content as real with "
-                f"{confidence_percentage} confidence. This means the wording "
-                "and patterns are similar to real news examples seen during "
-                "training. This does not guarantee the article is factually "
-                "correct, so important claims should still be verified."
-            )
-
-        return (
-            "The model could not confidently classify this content. "
-            "Please verify the information using trusted sources."
-        )
 
 
 fake_news_model = FakeNewsModel()
