@@ -7,7 +7,9 @@ import type { User } from "@supabase/supabase-js";
 
 type InputType = "headline" | "article" | "url";
 
-type PreparedAnalysisResult = {
+type SavedAnalysisResult = {
+  id?: string;
+  user_id: string;
   input_text: string;
   input_type: InputType;
   prediction: string;
@@ -25,10 +27,12 @@ export default function AnalysePage() {
   const [text, setText] = useState("");
 
   const [result, setResult] = useState<PredictionResponse | null>(null);
-  const [preparedResult, setPreparedResult] =
-    useState<PreparedAnalysisResult | null>(null);
+  const [savedResult, setSavedResult] = useState<SavedAnalysisResult | null>(
+    null
+  );
 
   const [error, setError] = useState("");
+  const [saveMessage, setSaveMessage] = useState("");
   const [isLoading, setIsLoading] = useState(false);
 
   useEffect(() => {
@@ -47,12 +51,34 @@ export default function AnalysePage() {
     checkUser();
   }, []);
 
+  async function saveResultToSupabase(
+    analysisResult: Omit<SavedAnalysisResult, "id">
+  ) {
+    const { data, error: insertError } = await supabase
+      .from("checks")
+      .insert(analysisResult)
+      .select()
+      .single();
+
+    if (insertError) {
+      throw new Error(insertError.message);
+    }
+
+    return data as SavedAnalysisResult;
+  }
+
   async function handleAnalyse() {
     setError("");
+    setSaveMessage("");
     setResult(null);
-    setPreparedResult(null);
+    setSavedResult(null);
 
     const trimmedText = text.trim();
+
+    if (!user) {
+      setError("You must be logged in to analyse news.");
+      return;
+    }
 
     if (!trimmedText) {
       setError("Please enter a headline, article, or URL.");
@@ -83,7 +109,8 @@ export default function AnalysePage() {
 
       setResult(predictionResult);
 
-      const analysisResult: PreparedAnalysisResult = {
+      const analysisResult: Omit<SavedAnalysisResult, "id"> = {
+        user_id: user.id,
         input_text: trimmedText,
         input_type: inputType,
         prediction: predictionResult.prediction,
@@ -93,7 +120,10 @@ export default function AnalysePage() {
         explanation: predictionResult.explanation,
       };
 
-      setPreparedResult(analysisResult);
+      const savedData = await saveResultToSupabase(analysisResult);
+
+      setSavedResult(savedData);
+      setSaveMessage("Analysis saved to your history.");
     } catch (err) {
       if (err instanceof Error) {
         setError(err.message);
@@ -231,12 +261,18 @@ export default function AnalysePage() {
             </p>
           )}
 
+          {saveMessage && (
+            <p className="mt-4 rounded-xl bg-green-50 p-3 text-sm leading-6 text-green-700">
+              {saveMessage}
+            </p>
+          )}
+
           <button
             onClick={handleAnalyse}
             disabled={isLoading}
             className="mt-5 w-full rounded-xl bg-slate-950 px-5 py-3 font-semibold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:opacity-60"
           >
-            {isLoading ? "Analysing..." : "Analyse News"}
+            {isLoading ? "Analysing and saving..." : "Analyse News"}
           </button>
         </section>
 
@@ -303,14 +339,14 @@ export default function AnalysePage() {
                 be used as a risk estimate, not as final proof.
               </div>
 
-              {preparedResult && (
+              {savedResult && (
                 <details className="rounded-2xl border border-slate-200 p-4">
                   <summary className="cursor-pointer font-semibold text-slate-900">
-                    Developer preview: result object for Stage 9
+                    Saved result preview
                   </summary>
 
                   <pre className="mt-4 overflow-x-auto rounded-xl bg-slate-950 p-4 text-xs text-white">
-                    {JSON.stringify(preparedResult, null, 2)}
+                    {JSON.stringify(savedResult, null, 2)}
                   </pre>
                 </details>
               )}
