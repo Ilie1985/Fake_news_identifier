@@ -8,7 +8,6 @@ from fastapi.middleware.cors import CORSMiddleware
 from app.ml_model import fake_news_model
 from app.schemas import PredictionRequest, PredictionResponse
 
-
 BASE_DIR = Path(__file__).resolve().parents[1]
 ARTIFACTS_DIR = BASE_DIR / "artifacts"
 
@@ -20,7 +19,7 @@ TOP_REAL_WORDS_PATH = ARTIFACTS_DIR / "top_real_words.csv"
 app = FastAPI(
     title="Fake News Detection API",
     description="Python FastAPI backend for ML-based fake news prediction.",
-    version="1.0.0"
+    version="1.0.0",
 )
 
 
@@ -29,7 +28,8 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=[
         "http://localhost:3000",
-        "http://127.0.0.1:3000"
+        "http://127.0.0.1:3000",
+        "https://fake-news-identifier-omega.vercel.app/",
     ],
     allow_credentials=True,
     allow_methods=["*"],
@@ -59,7 +59,7 @@ def root():
     return {
         "message": "Fake News Detection API is running",
         "docs": "/docs",
-        "health": "/health"
+        "health": "/health",
     }
 
 
@@ -69,9 +69,7 @@ def health_check():
     Simple health check endpoint.
     """
 
-    return {
-        "status": "ok"
-    }
+    return {"status": "ok"}
 
 
 @app.post("/predict", response_model=PredictionResponse)
@@ -85,16 +83,10 @@ def predict_news(request: PredictionRequest):
         return result
 
     except FileNotFoundError as error:
-        raise HTTPException(
-            status_code=500,
-            detail=str(error)
-        )
+        raise HTTPException(status_code=500, detail=str(error))
 
     except Exception as error:
-        raise HTTPException(
-            status_code=500,
-            detail=f"Prediction failed: {str(error)}"
-        )
+        raise HTTPException(status_code=500, detail=f"Prediction failed: {str(error)}")
 
 
 @app.get("/model/metrics")
@@ -106,7 +98,7 @@ def get_model_metrics():
     if not METRICS_PATH.exists():
         raise HTTPException(
             status_code=404,
-            detail="model_metrics.json not found. Run python scripts/train_model.py first."
+            detail="model_metrics.json not found. Run python scripts/train_model.py first.",
         )
 
     with open(METRICS_PATH, "r", encoding="utf-8") as file:
@@ -121,7 +113,7 @@ def read_feature_words(file_path: Path):
     if not file_path.exists():
         raise HTTPException(
             status_code=404,
-            detail=f"{file_path.name} not found. Run python scripts/train_model.py first."
+            detail=f"{file_path.name} not found. Run python scripts/train_model.py first.",
         )
 
     rows = []
@@ -130,10 +122,12 @@ def read_feature_words(file_path: Path):
         reader = csv.DictReader(file)
 
         for row in reader:
-            rows.append({
-                "word": row.get("word", ""),
-                "coefficient": float(row.get("coefficient", 0))
-            })
+            rows.append(
+                {
+                    "word": row.get("word", ""),
+                    "coefficient": float(row.get("coefficient", 0)),
+                }
+            )
 
     return rows
 
