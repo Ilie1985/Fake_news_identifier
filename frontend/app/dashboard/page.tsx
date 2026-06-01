@@ -36,6 +36,7 @@ type ChartItem = {
 export default function DashboardPage() {
   const [user, setUser] = useState<User | null>(null);
   const [checks, setChecks] = useState<CheckRecord[]>([]);
+
   const [isCheckingAuth, setIsCheckingAuth] = useState(true);
   const [isLoadingChecks, setIsLoadingChecks] = useState(false);
   const [error, setError] = useState("");
@@ -86,6 +87,7 @@ export default function DashboardPage() {
   }, []);
 
   const totalChecks = checks.length;
+
   const fakeCount = checks.filter((check) => check.prediction === "fake").length;
   const realCount = checks.filter((check) => check.prediction === "real").length;
 
@@ -97,8 +99,14 @@ export default function DashboardPage() {
 
   const predictionDistribution: ChartItem[] = useMemo(() => {
     return [
-      { name: "Fake", value: fakeCount },
-      { name: "Real", value: realCount },
+      {
+        name: "Fake",
+        value: fakeCount,
+      },
+      {
+        name: "Real",
+        value: realCount,
+      },
     ];
   }, [fakeCount, realCount]);
 
@@ -256,6 +264,11 @@ export default function DashboardPage() {
                       </PieChart>
                     </ResponsiveContainer>
                   </div>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    This chart shows how many of your saved analyses were
+                    predicted as fake or real.
+                  </p>
                 </div>
 
                 <div className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
@@ -274,6 +287,11 @@ export default function DashboardPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    This chart shows how often your saved analyses were marked
+                    as low, medium, high, or uncertain risk.
+                  </p>
                 </div>
               </section>
 
@@ -294,6 +312,11 @@ export default function DashboardPage() {
                       </BarChart>
                     </ResponsiveContainer>
                   </div>
+
+                  <p className="mt-3 text-sm leading-6 text-slate-600">
+                    This chart shows whether your saved checks were submitted as
+                    headlines, articles, or URLs.
+                  </p>
                 </div>
 
                 <div className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">

@@ -73,6 +73,31 @@ export default function MLInsightsPage() {
     ];
   }, [metrics]);
 
+  const actualVsPredictedData = useMemo(() => {
+    if (!metrics) {
+      return [];
+    }
+
+    return [
+      {
+        category: "Fake → Fake",
+        count: metrics.confusion_matrix[0][0],
+      },
+      {
+        category: "Fake → Real",
+        count: metrics.confusion_matrix[0][1],
+      },
+      {
+        category: "Real → Fake",
+        count: metrics.confusion_matrix[1][0],
+      },
+      {
+        category: "Real → Real",
+        count: metrics.confusion_matrix[1][1],
+      },
+    ];
+  }, [metrics]);
+
   const fakeWordsChartData = topFakeWords.map((item) => ({
     word: item.word,
     importance: Math.abs(item.coefficient),
@@ -264,47 +289,28 @@ export default function MLInsightsPage() {
           </section>
 
           <section className="mt-6 rounded-3xl bg-white p-5 shadow-sm sm:p-6">
-  <h2 className="mb-4 text-xl font-bold text-slate-950">
-    Actual vs predicted results
-  </h2>
+            <h2 className="mb-4 text-xl font-bold text-slate-950">
+              Actual vs predicted results
+            </h2>
 
-  <div className="h-96">
-    <ResponsiveContainer width="100%" height="100%">
-      <BarChart
-        data={[
-          {
-            category: "Fake → Fake",
-            count: metrics.confusion_matrix[0][0],
-          },
-          {
-            category: "Fake → Real",
-            count: metrics.confusion_matrix[0][1],
-          },
-          {
-            category: "Real → Fake",
-            count: metrics.confusion_matrix[1][0],
-          },
-          {
-            category: "Real → Real",
-            count: metrics.confusion_matrix[1][1],
-          },
-        ]}
-      >
-        <CartesianGrid strokeDasharray="3 3" />
-        <XAxis dataKey="category" />
-        <YAxis allowDecimals={false} />
-        <Tooltip />
-        <Bar dataKey="count" />
-      </BarChart>
-    </ResponsiveContainer>
-  </div>
+            <div className="h-96">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={actualVsPredictedData}>
+                  <CartesianGrid strokeDasharray="3 3" />
+                  <XAxis dataKey="category" />
+                  <YAxis allowDecimals={false} />
+                  <Tooltip />
+                  <Bar dataKey="count" />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
 
-  <p className="mt-3 text-sm leading-6 text-slate-600">
-    This chart visualises the model’s predictions on the test dataset. Correct
-    predictions are shown by Fake → Fake and Real → Real. Incorrect predictions
-    are shown by Fake → Real and Real → Fake.
-  </p>
-</section>
+            <p className="mt-3 text-sm leading-6 text-slate-600">
+              This chart visualises the model’s predictions on the test dataset.
+              Correct predictions are shown by Fake → Fake and Real → Real.
+              Incorrect predictions are shown by Fake → Real and Real → Fake.
+            </p>
+          </section>
 
           <section className="mt-6 grid gap-6 lg:grid-cols-2">
             <div className="rounded-3xl bg-white p-5 shadow-sm sm:p-6">
