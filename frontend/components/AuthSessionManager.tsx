@@ -6,24 +6,47 @@ import { supabase } from "@/lib/supabaseClient";
 
 const INACTIVITY_LIMIT = 5 * 60 * 1000; // 5 minutes
 
+const protectedRoutes = [
+  "/analyse",
+  "/dashboard",
+  "/history",
+  "/ml-insights",
+  "/account",
+];
+
 export default function AuthSessionManager() {
   const router = useRouter();
   const pathname = usePathname();
   const timeoutRef = useRef<NodeJS.Timeout | null>(null);
 
   useEffect(() => {
-    const publicPages = ["/login", "/register"];
-    const isPublicPage = publicPages.includes(pathname);
+    const isProtectedRoute = protectedRoutes.some((route) =>
+      pathname.startsWith(route)
+    );
 
+    async function checkUserAccess() {
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
+
+      if (isProtectedRoute && !user) {
+        router.replace("/login");
+        return;
+      }
+    }
+
+    checkUserAccess();
+  }, [pathname, router]);
+
+  useEffect(() => {
     async function logoutUserBecauseOfInactivity() {
-      const { data } = await supabase.auth.getUser();
+      const {
+        data: { user },
+      } = await supabase.auth.getUser();
 
-      if (data.user) {
+      if (user) {
         await supabase.auth.signOut();
-
-        if (!isPublicPage) {
-          router.push("/login");
-        }
+        router.replace("/login");
       }
     }
 
@@ -61,7 +84,7 @@ export default function AuthSessionManager() {
         window.removeEventListener(eventName, resetInactivityTimer);
       });
     };
-  }, [pathname, router]);
+  }, [router]);
 
   return null;
 }

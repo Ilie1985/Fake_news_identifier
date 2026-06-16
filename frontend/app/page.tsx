@@ -2,67 +2,36 @@ import Link from "next/link";
 
 export default function HomePage() {
   return (
-    <main className="mx-auto max-w-6xl px-4 py-10 sm:py-16">
-      <section className="rounded-3xl bg-white p-6 shadow-sm sm:p-10">
-        <p className="mb-3 text-sm font-semibold uppercase tracking-wide text-blue-700">
-          AI and Machine Learning Project
+    <main className="mx-auto max-w-6xl px-4 py-10">
+      <section className="rounded-3xl bg-slate-950 px-6 py-16 text-white shadow-sm md:px-12 md:py-24">
+        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-blue-300">
+          AI and machine learning project
         </p>
 
-        <h1 className="mb-4 max-w-3xl text-3xl font-bold tracking-tight text-slate-950 sm:text-5xl">
-          Mobile-friendly fake news detection web app
+        <h1 className="max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
+          Fake news detection powered by machine learning.
         </h1>
 
-        <p className="mb-8 max-w-3xl text-base leading-7 text-slate-700 sm:text-lg">
-          Paste a news headline or article and receive a machine-learning
-          prediction, confidence score, risk level, and explanation. This
-          project uses Python, scikit-learn, FastAPI, Next.js, and Tailwind CSS.
+        <p className="mt-6 max-w-2xl text-lg leading-8 text-slate-300">
+          Analyse a headline or article and receive a prediction, confidence
+          score, risk level, and AI-generated explanation.
         </p>
 
-        <div className="flex flex-col gap-3 sm:flex-row">
+        <div className="mt-10 flex flex-col gap-4 sm:flex-row">
           <Link
             href="/analyse"
-            className="rounded-xl bg-slate-950 px-5 py-3 text-center font-semibold text-white transition hover:bg-slate-800"
+            className="rounded-xl bg-white px-6 py-3 text-center font-semibold text-slate-950 hover:bg-slate-200"
           >
             Analyse News
           </Link>
 
           <Link
             href="/ml-insights"
-            className="rounded-xl border border-slate-300 px-5 py-3 text-center font-semibold text-slate-900 transition hover:bg-slate-50"
+            className="rounded-xl border border-white/30 px-6 py-3 text-center font-semibold text-white hover:bg-white/10"
           >
             View ML Insights
           </Link>
         </div>
-
-        <div className="mt-8 grid gap-4 sm:grid-cols-3">
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <h2 className="mb-2 font-bold text-slate-950">ML Prediction</h2>
-            <p className="text-sm leading-6 text-slate-600">
-              Uses TF-IDF vectorisation and Logistic Regression to classify
-              submitted news as real or fake.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <h2 className="mb-2 font-bold text-slate-950">Confidence Score</h2>
-            <p className="text-sm leading-6 text-slate-600">
-              Displays how confident the trained model is about the prediction.
-            </p>
-          </div>
-
-          <div className="rounded-2xl border border-slate-200 p-4">
-            <h2 className="mb-2 font-bold text-slate-950">Responsible Use</h2>
-            <p className="text-sm leading-6 text-slate-600">
-              The app provides a risk estimate, not final proof that an article
-              is true or false.
-            </p>
-          </div>
-        </div>
-
-        <p className="mt-6 rounded-xl bg-amber-50 p-4 text-sm leading-6 text-amber-900">
-          Important: this application is an educational AI/ML tool. Always
-          verify important information using trusted sources.
-        </p>
       </section>
     </main>
   );
