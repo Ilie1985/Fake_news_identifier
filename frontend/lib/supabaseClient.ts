@@ -4,11 +4,22 @@ const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
 if (!supabaseUrl) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL environment variable");
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_URL");
 }
 
 if (!supabaseAnonKey) {
-  throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY environment variable");
+  throw new Error("Missing NEXT_PUBLIC_SUPABASE_ANON_KEY");
 }
 
-export const supabase = createClient(supabaseUrl, supabaseAnonKey);
+export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
+  auth: {
+    persistSession: true,
+    autoRefreshToken: true,
+    detectSessionInUrl: true,
+
+    // This makes the login session last only for the current browser tab.
+    // When the tab is closed, the session is removed.
+    storage:
+      typeof window !== "undefined" ? window.sessionStorage : undefined,
+  },
+});

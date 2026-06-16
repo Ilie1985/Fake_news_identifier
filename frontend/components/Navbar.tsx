@@ -97,7 +97,7 @@ export default function Navbar() {
             {user && (
               <>
                 <Link href="/account" className="hover:text-slate-950">
-                  Account
+                  Profile
                 </Link>
 
                 <button
