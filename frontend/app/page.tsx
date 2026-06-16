@@ -4,9 +4,7 @@ export default function HomePage() {
   return (
     <main className="mx-auto max-w-6xl px-4 py-10">
       <section className="rounded-3xl bg-slate-950 px-6 py-16 text-white shadow-sm md:px-12 md:py-24">
-        <p className="mb-4 text-sm font-semibold uppercase tracking-wide text-blue-300">
-          AI and machine learning project
-        </p>
+        
 
         <h1 className="max-w-3xl text-4xl font-bold leading-tight md:text-6xl">
           Fake news detection powered by machine learning.
