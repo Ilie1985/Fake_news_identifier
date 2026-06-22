@@ -16,17 +16,6 @@ Frontend deployed on Vercel:
 https://fake-news-identifier-omega.vercel.app
 ```
 
-Backend deployed on Render:
-
-```text
-https://fake-news-identifier-backend.onrender.com
-```
-
-FastAPI documentation:
-
-```text
-https://fake-news-identifier-backend.onrender.com/docs
-```
 
 ---
 
