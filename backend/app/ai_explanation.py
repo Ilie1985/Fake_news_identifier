@@ -7,7 +7,7 @@ from google import genai
 
 load_dotenv()
 
-AI_PROVIDER = os.getenv("AI_PROVIDER", "ollama").lower().strip()
+AI_PROVIDER = os.getenv("AI_PROVIDER", "gemini").lower().strip()
 
 OLLAMA_MODEL = os.getenv("OLLAMA_MODEL", "llama3.2:3b")
 OLLAMA_URL = os.getenv("OLLAMA_URL", "http://localhost:11434/api/generate")
@@ -24,27 +24,33 @@ def generate_fallback_explanation(
 ) -> str:
     """
     Fallback explanation used if Ollama or Gemini is unavailable.
+    This explanation is intentionally simple and user-friendly.
     """
 
-    if prediction == "fake":
+    prediction_lower = prediction.lower()
+
+    if prediction_lower == "fake":
         return (
-            f"The model predicts this content as fake with {confidence_percentage} confidence. "
-            "This means the wording and patterns are similar to fake news examples seen during training. "
-            "The result should be treated as a risk estimate, not final proof. "
-            "Please verify the claim using trusted sources before sharing it."
+            f"The machine-learning model thinks this content is likely fake with "
+            f"{confidence_percentage} confidence. This does not mean the claim is definitely false. "
+            "It means the wording looks similar to fake-news examples the model saw during training. "
+            "The model may be reacting to vague wording, unusual claims, emotional language, or a lack of clear source details. "
+            "Please check reliable sources before trusting or sharing the information."
         )
 
-    if prediction == "real":
+    if prediction_lower == "real":
         return (
-            f"The model predicts this content as real with {confidence_percentage} confidence. "
-            "This means the wording and patterns are similar to real news examples seen during training. "
-            "This does not guarantee the article is factually correct. "
-            "Important claims should still be verified using reliable sources."
+            f"The machine-learning model thinks this content is likely real with "
+            f"{confidence_percentage} confidence. This does not prove the claim is true. "
+            "It means the wording looks more similar to real-news examples the model saw during training. "
+            "The content may use a more neutral tone, clearer wording, or a more standard news style. "
+            "Important claims should still be checked using trusted sources."
         )
 
     return (
-        "The model could not confidently classify this content. "
-        "Please verify the information using trusted sources."
+        "The machine-learning model is uncertain about this content. "
+        "The wording does not clearly match the fake or real examples it learned from. "
+        "Please verify the information using reliable sources."
     )
 
 
@@ -56,31 +62,50 @@ def build_explanation_prompt(
 ) -> str:
     """
     Builds one consistent prompt used by both Ollama and Gemini.
+
+    The explanation should focus on why the machine-learning model may have
+    made the prediction, not on claiming that the article is definitely true or false.
     """
 
     return f"""
-You are explaining a fake news detection result to a non-technical user.
+You are explaining the result of a fake news detection machine-learning model to a non-technical user.
 
-The machine-learning model analysed this news content:
+The user submitted this news content:
 
 \"\"\"
 {text[:2000]}
 \"\"\"
 
-Model result:
+The machine-learning model returned:
 - Prediction: {prediction}
 - Confidence: {confidence_percentage}
 - Risk level: {risk_level}
 
-Write a concise explanation in plain English.
+Write a friendly, human explanation.
 
-Rules:
-- Do not say the article is definitely true or definitely false.
-- Explain that this is a machine-learning risk estimate.
-- Mention possible reasons the content may look risky or reliable.
-- Give 2 practical verification steps.
-- Keep it under 150 words.
-- Use a responsible and neutral tone.
+Important context:
+- The prediction comes from a scikit-learn machine-learning model.
+- The model uses TF-IDF word patterns and Logistic Regression.
+- The model does not fact-check the news against the internet.
+- The model does not know for certain whether the claim is true or false.
+- It compares the wording with fake and real news examples seen during training.
+
+Your explanation must:
+1. Start by clearly saying what the model thinks.
+2. Explain why the model may have reached that result based on wording patterns.
+3. Mention specific words or phrases from the submitted text that may have influenced the result.
+4. Explain the confidence score in simple language.
+5. Remind the user that this is a risk estimate, not final proof.
+6. Give 2 simple verification steps.
+
+Style rules:
+- Use plain English.
+- Be natural and human-friendly.
+- Do not sound too technical.
+- Do not say the article is definitely fake or definitely real.
+- Do not overstate the result.
+- Keep it between 100 and 160 words.
+- Avoid bullet points unless they make the explanation clearer.
 """
 
 
@@ -171,13 +196,13 @@ def generate_ai_explanation(
     Chooses the AI explanation provider based on the AI_PROVIDER environment variable.
 
     Local development:
-    - AI_PROVIDER=ollama
+    - AI_PROVIDER=ollama or AI_PROVIDER=gemini
 
     Deployed version:
     - AI_PROVIDER=gemini
 
     Safe fallback:
-    - If the selected provider fails, return a fallback explanation.
+    - If the selected provider fails, return a simple fallback explanation.
     """
 
     try:

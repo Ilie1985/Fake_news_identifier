@@ -535,13 +535,6 @@ Public routes:
 10. View model evaluation details in ML Insights.
 11. View profile and session information in Profile.
 
----
-
-## Portfolio Summary
-
-FakeNews AI is a full-stack machine-learning web application that detects potentially fake or misleading news content. It uses a Python FastAPI backend with a scikit-learn TF-IDF Logistic Regression classifier for prediction, Gemini AI for plain-English explanations, Supabase for authentication and saved user history, and a Next.js frontend deployed on Vercel. The app includes user login, prediction history, dashboard charts, profile statistics, and an ML Insights page showing model evaluation metrics, confusion matrix, and feature importance.
-
----
 
 ## Future Improvements
 
@@ -568,18 +561,3 @@ Users should always verify important claims using trusted sources.
 
 ---
 
-## Author
-
-Marian Ilie
-
-GitHub:
-
-```text
-https://github.com/Ilie1985
-```
-
-Repository:
-
-```text
-https://github.com/Ilie1985/Fake_news_identifier
-```
